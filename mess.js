@@ -8,13 +8,29 @@
 // solve without the built-in Array.flat method.
 
 // our function
-var flat = function (arr, n) {
-    // return a flattened version of our original array
-    // we can flatten an array using reduce
-    const flattened = arr.reduce((acc, val) => acc.concat(val), [])
-    return flattened
-    // OH you know what this is a recursion problem. I'm really bad at recursion right now but I can improve
-    // I need to study more before solving this on my own
+var flat = function (arr, n = 0) {
+    // so we need to return a flattened array
+    const flattenedArr = []
+
+    // and we need to go down to n subarrays
+    arr.forEach(element => {
+        // if we encounter a subarray
+        if (Array.isArray(element)) {
+            // we hit depth 1 so stop here?
+            if (n === 1) {
+                // stop?
+            } else {
+                // recurse
+                flattenedArr.push(flat(element, n + 1))
+            }
+        } else {
+            // otherwise push our element
+            // console.log(`${element} <-- element`)
+            flattenedArr.push(element)
+        }
+    });
+    
+    return flattenedArr
 };
 
 
@@ -29,4 +45,4 @@ const exArr2 = [1, 2, 3, [4, 5, 6], [7, 8, [9, 10, 11], 12], [13, 14, 15]]
 const exDepth2 = 1
 // should return [1, 2, 3, 4, 5, 6, 7, 8, [9, 10, 11], 12, 13, 14, 15]
 
-console.log(flat(exArr1, exDepth1))
+console.log(flat(exArr2, exDepth2))
