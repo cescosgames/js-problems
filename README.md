@@ -8,11 +8,13 @@ I made a CLI tool that fetches a LeetCode problem and saves it as a commented JS
 
 ### Usage
 make sure file structure is for proper file saving / generating
+```
 main/
 ├── leetcodes/
 │   └── LC123.js
 ├── LCgetter.js
 └── README.md
+```
 ```
 node LCgetter.js <leetcode-problem-url> 
 ```
