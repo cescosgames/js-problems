@@ -9,7 +9,7 @@ const path = require('path');
 // 3rd CLI (1. node 2. filename (LCgetter.js) 3. URL)
 const url = process.argv[2];
 
-// if we don't have a URL error and exit
+// if we don't have a URL, tell user how to use and exit
 if (!url) {
     console.error('Usage: node LCgetter.js <leetcode-problem-url>');
     process.exit(1);
@@ -40,7 +40,7 @@ const query = `
 
 // make our fetch request to the leetcodeAPI
 async function fetchProblem() {
-    const res = await fetch('https://leetcode.com/graphql', { // fetch from their public graphql
+    const res = await fetch('https://leetcode.com/graphql', { // fetch from their public graphql api
         method: 'POST', // why is this post and not get? because in graphql even read operations use POST
         headers: {
             'Content-Type': 'application/json',

@@ -7,6 +7,12 @@ A collection of my approaches and solutions to various practice problems from le
 I made a CLI tool that fetches a LeetCode problem and saves it as a commented JS file for quicker transferring from leetcode to vscode for practice
 
 ### Usage
+make sure file structure is for proper file saving / generating
+main/
+├── leetcodes/
+│   └── LC123.js
+├── LCgetter.js
+└── README.md
 ```
 node LCgetter.js <leetcode-problem-url> 
 ```
