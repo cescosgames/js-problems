@@ -16,7 +16,7 @@ if (!url) {
 }
 
 // extract the slug from the URL e.g. "two-sum" from ".../problems/two-sum/..."
-const slugMatch = url.match(/\/problems\/([\w-]+)/); // use regex to get the slug
+const slugMatch = url.match(/\/problems\/([\w-]+)/); // use regex to get the slug by getting the part after /problems/ which is why we have to only copy and paste until end of problem name
 if (!slugMatch) { // if we don't match it, error and exit
     console.error('Could not parse problem slug from URL:', url);
     process.exit(1);
@@ -26,6 +26,7 @@ if (!slugMatch) { // if we don't match it, error and exit
 const slug = slugMatch[1];
 
 // our query to the GraphQL API and what we want from it
+// LC has a public graphql api that takes in a request template that we can access through the slug (problem name)
 const query = `
   query getQuestion($titleSlug: String!) {
     question(titleSlug: $titleSlug) {
@@ -39,32 +40,37 @@ const query = `
 
 // make our fetch request to the leetcodeAPI
 async function fetchProblem() {
-    const res = await fetch('https://leetcode.com/graphql', {
-        method: 'POST',
+    const res = await fetch('https://leetcode.com/graphql', { // fetch from their public graphql
+        method: 'POST', // why is this post and not get? because in graphql even read operations use POST
         headers: {
             'Content-Type': 'application/json',
-            'Referer': 'https://leetcode.com',
+            'Referer': 'https://leetcode.com', // leetcode expects a referer
         },
         body: JSON.stringify({ query, variables: { titleSlug: slug } }),
     });
 
+    // check if we got oru response
     if (!res.ok) {
         console.error(`GraphQL request failed: ${res.status} ${res.statusText}`);
         process.exit(1);
     }
 
+    // get our json back
     const json = await res.json();
     const q = json?.data?.question;
 
+    // if it returns no data exit
     if (!q) {
         console.error('Problem not found or API returned no data.');
         process.exit(1);
     }
 
+    // otherwise return our json data
     return q;
 }
 
-// regex to strip html
+// regex to strip html in 2 passes. First it handles the pre blocks (input/output examples) and strips all tags inside but preserves text
+// first time encountering pre blocks, this is how leetcode problems are returned, they put examples <pre> </pre> tags
 function stripHtml(html) {
     return html
         .replace(/<pre>([\s\S]*?)<\/pre>/gi, (_, inner) => {
@@ -76,7 +82,7 @@ function stripHtml(html) {
                 .replace(/&gt;/g, '>')
                 .replace(/&amp;/g, '&')
                 .trim() + '\n';
-        })
+        }) // then it strips all remaining html tags, collapses blank lines, and trips whitespace
         .replace(/<\/?(p|div|li|ul|ol|strong|em|code|sup|sub|br\s*\/?)[^>]*>/gi, '')
         .replace(/<[^>]+>/g, '')
         .replace(/&nbsp;/g, ' ')
@@ -88,7 +94,7 @@ function stripHtml(html) {
         .trim();
 }
 
-// format our description
+// format our description by taking our stripped html and prepends // to it's all one big comment block
 function formatDescription(text) {
     // wrap each line as a comment line
     return text

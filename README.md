@@ -2,7 +2,27 @@
 
 A collection of my approaches and solutions to various practice problems from leetcode and AI prompts
 
-## Notes
+## LCgetter.js
+
+I made a CLI tool that fetches a LeetCode problem and saves it as a commented JS file for quicker transferring from leetcode to vscode for practice
+
+### Usage
+```
+node LCgetter.js <leetcode-problem-url> 
+```
+### Example
+
+node LCgetter.js https://leetcode.com/problems/two-sum/
+
+This will create leetcodes/LC1.js with the problem description and examples formatted as comments.
+
+### LCgetter Notes
+
+- Only paste the URL up to the end of the problem name (no query params)! very important!
+- The output file will not be overwritten if it already exists
+- Requires Node.js with fetch support (v18+)
+
+## Other Notes
 
 In practice problems, I can get in the habit of seeing and implementing recursion. 
 In more complex problems, or real life I can not. I need to learn to see them better. One advice is
