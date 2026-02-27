@@ -4,6 +4,9 @@
 // Note that you must do this in-place without making a copy of the array.
 
 // this is categorized as 2 pointers, so use a 2 pointers solution! That's a huge hint!
+// my original solution was a mess of while loops (but it worked)
+// then my second solution I completely forgot I had to modify in place (and it worked great and clean quick but shallow copy not like the problem stated)
+// then this solution, I got help with (clean 2 pointer, fast/slow, tracking 2 different positions at once)
 var moveZeroes = function(nums) {
     // ok 2 point solution, start from the front and track 2 indices; the array, and the non-zeros
     let insertIndex = 0; // start at insert index 0
