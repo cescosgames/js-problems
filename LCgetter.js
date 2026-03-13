@@ -33,7 +33,7 @@ const query = `
       questionId
       title
       content
-      exampleTestcases
+      codeSnippets { langSlug code }
     }
   }
 `;
@@ -49,7 +49,7 @@ async function fetchProblem() {
         body: JSON.stringify({ query, variables: { titleSlug: slug } }),
     });
 
-    // check if we got oru response
+    // check if we got our response
     if (!res.ok) {
         console.error(`GraphQL request failed: ${res.status} ${res.statusText}`);
         process.exit(1);
@@ -69,38 +69,68 @@ async function fetchProblem() {
     return q;
 }
 
-// regex to strip html in 2 passes. First it handles the pre blocks (input/output examples) and strips all tags inside but preserves text
-// first time encountering pre blocks, this is how leetcode problems are returned, they put examples <pre> </pre> tags
-function stripHtml(html) {
-    return html
-        .replace(/<pre>([\s\S]*?)<\/pre>/gi, (_, inner) => {
-            // preserve pre blocks (examples) with a blank line around them
-            return '\n' + inner
-                .replace(/<[^>]+>/g, '')
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&amp;/g, '&')
-                .trim() + '\n';
-        }) // then it strips all remaining html tags, collapses blank lines, and trips whitespace
-        .replace(/<\/?(p|div|li|ul|ol|strong|em|code|sup|sub|br\s*\/?)[^>]*>/gi, '')
+// cut HTML at first "Example 1:" occurrence, strip tags from description-only portion
+function extractDescription(html) {
+    const cutoff = html.search(/<[^>]*>\s*Example\s*1\s*:/i);
+    const descHtml = cutoff !== -1 ? html.slice(0, cutoff) : html;
+    return descHtml
+        .replace(/<\/?(p|div|li|ul|ol|br\s*\/?)[^>]*>/gi, '\n')
+        .replace(/<\/?(strong|em|code|sup|sub)[^>]*>/gi, '')
         .replace(/<[^>]+>/g, '')
         .replace(/&nbsp;/g, ' ')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&amp;/g, '&')
-        .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(code))
-        .replace(/\n{3,}/g, '\n\n')
+        .replace(/&#(\d+);/g, (_, c) => String.fromCharCode(c))
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l)
+        .map(l => `// ${l}`)
+        .join('\n')
         .trim();
 }
 
-// format our description by taking our stripped html and prepends // to it's all one big comment block
-function formatDescription(text) {
-    // wrap each line as a comment line
-    return text
-        .split('\n')
-        .map(line => `// ${line}`)
-        .join('\n');
+// smart comma-split that handles array values containing commas
+function splitInputParams(inputLine) {
+    const raw = inputLine.replace(/^input:\s*/i, '').trim();
+    if (!raw) return [];
+    // Split on ", " only when followed by an identifier then "="
+    return raw.split(/,\s*(?=[a-zA-Z_]\w*\s*=)/);
+}
+
+// parse <pre> blocks to get structured example objects
+function extractExamples(html) {
+    const examples = [];
+    const preRegex = /<pre>([\s\S]*?)<\/pre>/gi;
+    let match, i = 1;
+    while ((match = preRegex.exec(html)) !== null) {
+        const text = match[1]
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+            .trim();
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        const inputLine = lines.find(l => /^input:/i.test(l)) || '';
+        const outputLine = lines.find(l => /^output:/i.test(l)) || '';
+        const explanationLine = lines.find(l => /^explanation:/i.test(l)) || '';
+        if (!inputLine) continue;
+        const params = splitInputParams(inputLine);
+        examples.push({
+            index: i++,
+            params,
+            output: outputLine.replace(/^output:\s*/i, '').trim(),
+            explanation: explanationLine.replace(/^explanation:\s*/i, '').trim(),
+        });
+    }
+    return examples;
+}
+
+// find the JS snippet and strip JSDoc
+function extractCodeSnippet(codeSnippets) {
+    if (!codeSnippets?.length) return '';
+    const js = codeSnippets.find(s => s.langSlug === 'javascript');
+    if (!js) return '';
+    return js.code.replace(/\/\*\*[\s\S]*?\*\//g, '').trim();
 }
 
 // putting it all together
@@ -108,23 +138,37 @@ async function main() {
     console.log(`Fetching problem: ${slug}...`);
     const q = await fetchProblem();
 
-    const { questionId, title, content, exampleTestcases } = q;
+    const { questionId, title, content, codeSnippets } = q;
 
-    const description = stripHtml(content);
-    const examples = exampleTestcases
-        ? exampleTestcases.split('\n').filter(Boolean)
-        : [];
+    const description = extractDescription(content);
+    const stub = extractCodeSnippet(codeSnippets);
+    const examples = extractExamples(content);
 
-    const examplesComment = examples.length
-        ? '// Examples:\n' + examples.map(e => `// ${e}`).join('\n')
-        : '// No examples available.';
+    const usedNames = new Set();
+    const exampleBlocks = examples.map(({ index, params, output, explanation }) => {
+        const lines = [`// Example ${index}:`];
+        for (const p of params) {
+            const eqIdx = p.indexOf('=');
+            let name = p.slice(0, eqIdx).trim();
+            const value = p.slice(eqIdx + 1).trim();
+            if (usedNames.has(name)) name = `${name}_${index}`;
+            usedNames.add(name);
+            lines.push(`const ${name} = ${value}`);
+        }
+        lines.push(`// Output: ${output}`);
+        if (explanation) lines.push(`// Explanation: ${explanation}`);
+        return lines.join('\n');
+    });
 
     const fileContent = [
         `// LC ${questionId} - ${title}`,
         '',
-        formatDescription(description),
+        description,
         '',
-        examplesComment,
+        '// intuition: ',
+        stub,
+        '',
+        exampleBlocks.join('\n\n'),
         '',
         '',
     ].join('\n');
