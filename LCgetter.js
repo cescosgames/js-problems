@@ -1,6 +1,7 @@
 // LCgetter.js
-// Usage: node LCgetter.js https://leetcode.com/problems/two-sum/
-// ONLY CUT FROM HTTPS TO END OF PROBLEM NAME
+// Usage: node LCgetter.js '<full leetcode problem URL>'
+// Wrap URL in single quotes to avoid zsh interpreting ? and & as special chars
+// e.g. node LCgetter.js 'https://leetcode.com/problems/two-sum/description/?envType=problem-list-v2&envId=abc'
 
 // import fs and path to modify our filesystem
 const fs = require('fs');
@@ -16,7 +17,7 @@ if (!url) {
 }
 
 // extract the slug from the URL e.g. "two-sum" from ".../problems/two-sum/..."
-const slugMatch = url.match(/\/problems\/([\w-]+)/); // use regex to get the slug by getting the part after /problems/ which is why we have to only copy and paste until end of problem name
+const slugMatch = url.match(/\/problems\/([\w-]+)/); // extracts slug from URL — works with full URLs including query params
 if (!slugMatch) { // if we don't match it, error and exit
     console.error('Could not parse problem slug from URL:', url);
     process.exit(1);
