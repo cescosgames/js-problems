@@ -27,8 +27,8 @@ var evalRPN = function(tokens) {
         if (tokens[i] in operations) { // if our token is an operation
             // console.log(stack)
             let op = stack.pop(); // pop the operation
-            let secondOperand = Math.trunc(Number(stack.pop()));  // pop the second operand (one right before operation)
-            let firstOperand  = Math.trunc(Number(stack.pop()));  // pop the first operand (one right before second operand)
+            let secondOperand = Math.trunc(Number(stack.pop())); // pop the second operand (one right before operation)
+            let firstOperand = Math.trunc(Number(stack.pop())); // pop the first operand (one right before second operand)
             // now we cleared out what we want to use from our stack and can replace with the result of this operation
             let res = operations[op](firstOperand, secondOperand); // this is the result
             stack.push(res) // push the result to our stack so we can continue working
